@@ -1,42 +1,33 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import './Login.css';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import "./Login.css";
 
 function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState('regular');
-  const [error, setError] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
-    // Basic validation
-    if (!username.trim() || !password.trim()) {
-      setError('Please enter both username and password');
+    const result = login(username, password);
+    if (!result.ok) {
+      setError(result.message || "Login failed. Please try again.");
       return;
     }
 
-    // Mock authentication - accepts any username/password
-    // In a real app, this would validate against a backend
-    try {
-      login(username, password, selectedRole);
-      // Redirect to saved articles after successful login
-      navigate('/saved');
-    } catch (err) {
-      setError('Login failed. Please try again.');
-    }
+    navigate("/saved");
   };
 
   return (
     <div className="login-container">
       <div className="login-card">
         <h2>Login to NewsReader</h2>
-        <p className="login-subtitle">Access your personalized news experience</p>
+        <p className="login-subtitle">Access your personalized saved articles</p>
 
         {error && <div className="error-message">{error}</div>}
 
@@ -48,7 +39,7 @@ function Login() {
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              placeholder='Try "regular" or "admin"'
             />
           </div>
 
@@ -59,20 +50,8 @@ function Login() {
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
+              placeholder='Admin password is "password"'
             />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="role">Account Type</label>
-            <select
-              id="role"
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-            >
-              <option value="regular">Regular User</option>
-              <option value="premium">Premium User</option>
-            </select>
           </div>
 
           <button type="submit" className="btn btn-primary login-button">
@@ -82,12 +61,17 @@ function Login() {
 
         <div className="demo-accounts">
           <p className="demo-title">Demo Accounts (for testing):</p>
-          <p>Any username/password combination will work</p>
-          <p>Select "Regular" or "Premium" to test different access levels</p>
+          <p>
+            <strong>Regular:</strong> any username + any password
+          </p>
+          <p>
+            <strong>Admin:</strong> username <code>admin</code> + password{" "}
+            <code>password</code>
+          </p>
         </div>
       </div>
     </div>
   );
-};
+}
 
 export default Login;

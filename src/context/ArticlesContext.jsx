@@ -1,48 +1,72 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useMemo, useState } from "react";
+import { useAuth } from "./AuthContext";
 
-// ⚠️ SECURITY ISSUE: This context is shared globally with no user authentication
-// All users see the same saved articles!
 const ArticlesContext = createContext();
 
 export function ArticlesProvider({ children }) {
-  const [savedArticles, setSavedArticles] = useState([]);
+  const { user, isAuthenticated } = useAuth();
+
+  // { [username]: Article[] }
+  const [savedArticlesByUser, setSavedArticlesByUser] = useState({});
+
+  const currentUsername = user?.username;
+
+  const getUserSavedArticles = () => {
+    if (!isAuthenticated() || !currentUsername) return [];
+    return savedArticlesByUser[currentUsername] || [];
+  };
 
   const saveArticle = (article) => {
-    setSavedArticles(prev => {
-      // Check if article is already saved
-      if (prev.find(a => a.url === article.url)) {
-        return prev;
-      }
-      return [...prev, article];
+    if (!isAuthenticated() || !currentUsername) return;
+
+    setSavedArticlesByUser((prev) => {
+      const existing = prev[currentUsername] || [];
+      if (existing.some((a) => a.url === article.url)) return prev;
+
+      return {
+        ...prev,
+        [currentUsername]: [...existing, article],
+      };
     });
   };
 
   const removeArticle = (url) => {
-    setSavedArticles(prev => prev.filter(a => a.url !== url));
+    if (!isAuthenticated() || !currentUsername) return;
+
+    setSavedArticlesByUser((prev) => {
+      const existing = prev[currentUsername] || [];
+      return {
+        ...prev,
+        [currentUsername]: existing.filter((a) => a.url !== url),
+      };
+    });
   };
 
   const isArticleSaved = (url) => {
-    return savedArticles.some(a => a.url === url);
+    if (!isAuthenticated() || !currentUsername) return false;
+    return (savedArticlesByUser[currentUsername] || []).some((a) => a.url === url);
   };
 
-  return (
-    <ArticlesContext.Provider 
-      value={{ 
-        savedArticles, 
-        saveArticle, 
-        removeArticle, 
-        isArticleSaved 
-      }}
-    >
-      {children}
-    </ArticlesContext.Provider>
+  // Step 7 needs this for admin
+  const getAllUserArticles = () => savedArticlesByUser;
+
+  const value = useMemo(
+    () => ({
+      savedArticlesByUser,
+      saveArticle,
+      removeArticle,
+      isArticleSaved,
+      getUserSavedArticles,
+      getAllUserArticles,
+    }),
+    [savedArticlesByUser, currentUsername, isAuthenticated]
   );
-};
+
+  return <ArticlesContext.Provider value={value}>{children}</ArticlesContext.Provider>;
+}
 
 export const useArticles = () => {
   const context = useContext(ArticlesContext);
-  if (!context) {
-    throw new Error('useArticles must be used within ArticlesProvider');
-  }
+  if (!context) throw new Error("useArticles must be used within ArticlesProvider");
   return context;
 };
